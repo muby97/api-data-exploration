@@ -49,19 +49,19 @@ def main():
     recent_tracks_data = fetch_user_tracks(user, API_KEY, limit)
     
     # Top Artists Analysis
-    st.subheader("Top Artists Data (Raw JSON)")
-    st.json(top_artists_data)
+    # st.subheader("Top Artists Data (Raw JSON)")
+    # st.json(top_artists_data)
     
     if 'topartists' in top_artists_data and 'artist' in top_artists_data['topartists']:
         artists = top_artists_data['topartists']['artist']
         artists_df = pd.DataFrame(artists)
         
-        st.subheader("Top Artists Data (DataFrame)")
-        st.write(artists_df)
+        # st.subheader("Top Artists Data (DataFrame)")
+        # st.write(artists_df)
         
         if 'name' in artists_df.columns and 'playcount' in artists_df.columns:
             st.subheader(f"Top {limit} Artists for {user}")
-            st.write(artists_df[['name', 'playcount']])
+            # st.write(artists_df[['name', 'playcount']])
             
             # Bar Chart for Top Artists
             fig = px.bar(artists_df, x='name', y='playcount', title='Top Artists Playcount')
@@ -72,19 +72,19 @@ def main():
         st.error("Top artists data not found.")
     
     # Recent Tracks Visualization
-    st.subheader("Recent Tracks Data (Raw JSON)")
-    st.json(recent_tracks_data)
+    # st.subheader("Recent Tracks Data (Raw JSON)")
+    # st.json(recent_tracks_data)
     
     recent_tracks = recent_tracks_data.get('recenttracks', {}).get('track', [])
     
-    st.subheader("Recent Tracks Data (List)")
-    st.write(recent_tracks)
+    # st.subheader("Recent Tracks Data (List)")
+    # st.write(recent_tracks)
     
     if isinstance(recent_tracks, list) and len(recent_tracks) > 0:
         tracks_df = pd.json_normalize(recent_tracks)
         
-        st.subheader("Recent Tracks Data (DataFrame)")
-        st.write(tracks_df)
+        # st.subheader("Recent Tracks Data (DataFrame)")
+        # st.write(tracks_df)
         
         if 'date' in tracks_df.columns:
             tracks_df['date'] = pd.to_datetime(tracks_df['date'].apply(lambda x: x['#text'] if isinstance(x, dict) and '#text' in x else None))
