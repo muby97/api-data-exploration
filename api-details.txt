@@ -1,0 +1,15 @@
+Application name	API Exploration
+API key	dbeab0a780a8f7aeaa5cf264f69a456c
+Shared secret	cf99dcaed7283dfc56ee643750bff0ec
+Registered to	muby97
+
+https://www.last.fm/api/accounts
+https://www.last.fm/api/account/create
+
+
+Localhost:
+
+Application name	API Exploration
+API key	c706f5bd1cff553f928f8d08d988a6e4
+Shared secret	8fd13b3ee40c064c52f8164ec94fe300
+Registered to	muby97
