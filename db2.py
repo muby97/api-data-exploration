@@ -121,85 +121,117 @@ def main():
     # Display recent tracks' artwork
     display_recent_tracks_artworks(recent_tracks_data)
 
-    # First Row: Listening Frequency by Hour (Spline Graph)
-    if recent_tracks_data and 'recenttracks' in recent_tracks_data:
-        tracks = recent_tracks_data['recenttracks']['track']
-        df_tracks = pd.DataFrame(tracks)
-        df_tracks['hour'] = pd.to_datetime(df_tracks['date'].apply(lambda x: x.get('#text') if isinstance(x, dict) else None), errors='coerce').dt.hour
-        hour_counts = df_tracks['hour'].value_counts().sort_index()
-        
-        # Prepare data for spline plot
-        hours = np.arange(0, 24)
-        frequencies = [hour_counts.get(hour, 0) for hour in hours]
-        
-        # Create figure
-        fig = go.Figure()
-
-        # Add trace with gradient effect
-        fig.add_trace(go.Scatter(
-            x=hours,
-            y=frequencies,
-            mode='lines+markers',
-            line=dict(color='rgba(255, 102, 102, 0.8)', width=4, shape='spline'),
-            fill='tozeroy',
-            fillcolor='rgba(255, 102, 102, 0.3)'  # Gradient effect
-        ))
-
-        # Update layout for background color and axis titles
-        fig.update_layout(
-            title="Listening Frequency by Hour (Spline Graph)",
-            xaxis_title="Hour of the Day",
-            yaxis_title="Frequency",
-            # plot_bgcolor='rgba(240, 240, 240, 0.8)',  # Background color of the graph area
-            # paper_bgcolor='white'  # Background color of the entire plotting area (optional)
-        )
-        
-        # Display the figure
-        st.plotly_chart(fig)
-    
-    if top_artists_data and 'topartists' in top_artists_data:
+    # Display visualizations side by side
+    if 'topartists' in top_artists_data and 'artist' in top_artists_data['topartists']:
         artists_df = pd.DataFrame(top_artists_data['topartists']['artist'])
-        artists_df['playcount'] = pd.to_numeric(artists_df['playcount'], errors='coerce')
-        
-        red_to_blue = [[0, 'red'], [1, 'blue']]
+
+        # First Row: Top Artists Playcount with Red to Yellow Gradient Bars
+        artists_df['color'] = np.linspace(0, 1, len(artists_df))  # Create a gradient scale
+
+        # Custom red to yellow gradient scale
+        custom_colorscale = [[0, 'red'], [1, 'yellow']]
         
         fig = px.bar(
             artists_df,
             x='name',
             y='playcount',
-            title="Top Artists Playcount",
-            labels={'name': 'Artist', 'playcount': 'Playcount'},
-            color='playcount',
-            color_continuous_scale='tealrose'  # Gradient color from yellow to brown
+            title='Top Artists Playcount',
+            color='color',
+            color_continuous_scale=custom_colorscale,  # Using custom gradient color scale
+            labels={'color': 'Playcount Gradient'}
+        )
+        fig.update_layout(
+            coloraxis_colorbar=dict(
+                title="Playcount",
+                tickvals=[0, 1],
+                ticktext=["Low", "High"]
+            )
         )
         st.plotly_chart(fig)
 
-    # Second Row: 3D Stream Graph-like Visualization Comparing Streaming Habits Across Regions/Countries
-    # Dummy Data for Example (Replace with actual data from your API or dataset)
-    regions = ['North America', 'Europe', 'Asia', 'South America', 'Africa', 'Oceania']
-    countries = ['USA', 'UK', 'Germany', 'Japan', 'Brazil', 'Nigeria', 'Australia']
-    data = np.random.rand(len(countries), len(regions)) * 1000
-    
-    fig = go.Figure(data=[go.Surface(
-        z=data,
-        x=countries,
-        y=regions,
-        colorscale='Viridis',
-        cmin=0,
-        cmax=np.max(data)
-    )])
+        # Add Marquee Effect for Artist Images
+        artist_images = [artist.get('image', [{}])[-1].get('#text') for artist in top_artists_data['topartists']['artist']]
+        if artist_images:
+            st.markdown("""
+                <style>
+                .marquee-container {
+                    width: 100%;
+                    overflow: hidden;
+                    white-space: nowrap;
+                }
+                .marquee-content {
+                    display: inline-block;
+                    padding-left: 100%;
+                    animation: marquee 10s linear infinite;
+                }
+                @keyframes marquee {
+                    0% { transform: translateX(0); }
+                    100% { transform: translateX(-100%); }
+                }
+                .marquee-content img {
+                    border-radius: 50%;
+                    width: 80px;
+                    height: 80px;
+                    margin: 0 10px;
+                }
+                </style>
+                <div class="marquee-container">
+                    <div class="marquee-content">
+                        """ + "".join(f'<img src="{img}" alt="Artist Image">' for img in artist_images if img) + """
+                    </div>
+                </div>
+                """, unsafe_allow_html=True)
 
-    fig.update_layout(
-        title="Streaming Habits Across Regions/Countries (3D Surface Plot)",
-        scene=dict(
-            xaxis_title='Country',
-            yaxis_title='Region',
-            zaxis_title='Streams'
+        # First Row: Listening Clock Visualization
+        tracks = recent_tracks_data['recenttracks']['track']
+        df_tracks = pd.DataFrame(tracks)
+        df_tracks['hour'] = pd.to_datetime(df_tracks['date'].apply(lambda x: x.get('#text') if isinstance(x, dict) else None), errors='coerce').dt.hour
+        hour_counts = df_tracks['hour'].value_counts().sort_index()
+
+        fig = go.Figure(
+            go.Barpolar(
+                r=hour_counts.values,
+                theta=hour_counts.index.astype(str),
+                width=360/24,
+                marker_color=hour_counts.index,
+                marker_line_color="black",
+                marker_line_width=2,
+                opacity=0.8
+            )
         )
-    )
-    st.plotly_chart(fig)
+        fig.update_layout(
+            title="Listening Frequency by Hour",
+            polar=dict(
+                radialaxis=dict(visible=True),
+                angularaxis=dict(tickmode="array", tickvals=[i * 15 for i in range(24)])
+            ),
+            showlegend=False
+        )
+        st.plotly_chart(fig)
 
-    # Third Row: Similar Artists as Bubble-Packed Circle
+    # Second Row: Similar Artists as Bubble-Packed Circle
+    with st.container():
+        artist = st.selectbox("Select Artist for Similar Artists:", artist_names)
+        if artist:
+            similar_artists_data = fetch_similar_artists(artist, API_KEY)
+            similar_artists = similar_artists_data.get('similarartists', {}).get('artist', [])
+            
+            if similar_artists:
+                artists_df = pd.DataFrame(similar_artists)
+                artists_df['match'] = pd.to_numeric(artists_df['match'], errors='coerce')
+
+                fig = px.treemap(
+                    artists_df,
+                    path=['name'],
+                    values='match',
+                    color='match',
+                    color_continuous_scale='RdBu',
+                    title=f"Similar Artists to {artist} (Bubble-Packed Circle)",
+                )
+                fig.update_traces(marker=dict(showscale=False), textinfo="label+value")
+                st.plotly_chart(fig)
+
+    # Third Row: Top Tracks by Artist as Radial Histogram
     with st.container():
         artist = st.selectbox("Select Artist for Top Tracks:", artist_names)
         if artist:
@@ -234,40 +266,7 @@ def main():
                 )
                 st.plotly_chart(fig)
 
-                # Display top 8 tracks marquee
-                top_8_tracks = tracks_df.head(8)
-                marquee_content = " | ".join([f"{row['name']} ({row['playcount']} plays)" for index, row in top_8_tracks.iterrows()])
-                
-                # HTML for marquee
-                marquee_html = f"""
-                <style>
-                    .marquee {{
-                        width: 100%;
-                        overflow: hidden;
-                        white-space: nowrap;
-                        box-sizing: border-box;
-                        background-color: #f0f0f0;
-                        padding: 10px 0;
-                        border-radius: 10px;
-                        box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
-                    }}
-                    .marquee span {{
-                        display: inline-block;
-                        padding-left: 100%;
-                        animation: marquee 15s linear infinite;
-                    }}
-                    @keyframes marquee {{
-                        0% {{ transform: translateX(100%); }}
-                        100% {{ transform: translateX(-100%); }}
-                    }}
-                </style>
-                <div class="marquee">
-                    <span>{marquee_content}</span>
-                </div>
-                """
-                st.markdown(marquee_html, unsafe_allow_html=True)
-
-    # Fifth Row: Genre Popularity Over Time
+    # Fourth Row: Genre Popularity Over Time
     with st.container():
         genre_tracks_data = fetch_genre_tracks(user, API_KEY)
         recent_tracks = genre_tracks_data['recenttracks']['track']
