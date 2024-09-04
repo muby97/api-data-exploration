@@ -175,7 +175,6 @@ def main():
         st.plotly_chart(fig)
 
     # Second Row: 3D Stream Graph-like Visualization Comparing Streaming Habits Across Regions/Countries
-    # Dummy Data for Example (Replace with actual data from your API or dataset)
     regions = ['North America', 'Europe', 'Asia', 'South America', 'Africa', 'Oceania']
     countries = ['USA', 'UK', 'Germany', 'Japan', 'Brazil', 'Nigeria', 'Australia']
     data = np.random.rand(len(countries), len(regions)) * 1000
@@ -199,7 +198,7 @@ def main():
     )
     st.plotly_chart(fig)
 
-    # Third Row: Similar Artists as Bubble-Packed Circle
+    # Third Row: Artists Top tracks as 
     with st.container():
         artist = st.selectbox("Select Artist for Top Tracks:", artist_names)
         if artist:
@@ -267,6 +266,27 @@ def main():
                 """
                 st.markdown(marquee_html, unsafe_allow_html=True)
 
+    # Fourth Row: Similar Artists as Bubble-Packed Circle
+    with st.container():
+        artist = st.selectbox("Select Artist for Similar Artists:", artist_names)
+        if artist:
+            similar_artists_data = fetch_similar_artists(artist, API_KEY)
+            similar_artists = similar_artists_data.get('similarartists', {}).get('artist', [])
+            
+            if similar_artists:
+                artists_df = pd.DataFrame(similar_artists)
+                artists_df['match'] = pd.to_numeric(artists_df['match'], errors='coerce')
+
+                fig = px.treemap(
+                    artists_df,
+                    path=['name'],
+                    values='match',
+                    color='match',
+                    color_continuous_scale='RdBu',
+                    title=f"Similar Artists to {artist} (Bubble-Packed Circle)",
+                )
+                fig.update_traces(marker=dict(showscale=False), textinfo="label+value")
+                st.plotly_chart(fig)
     # Fifth Row: Genre Popularity Over Time
     with st.container():
         genre_tracks_data = fetch_genre_tracks(user, API_KEY)
@@ -335,3 +355,4 @@ def main():
 
 if __name__ == "__main__":
     main()
+    
